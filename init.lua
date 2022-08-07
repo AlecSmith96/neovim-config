@@ -27,6 +27,14 @@ vim.cmd([[autocmd FileType go setlocal noexpandtab shiftwidth=4 softtabstop=4 ta
 -- Run gofmt + goimport on save
 vim.api.nvim_exec([[ autocmd BufWritePre *.go :silent! lua require('go.format').goimport() ]], false)
 
+-- Automatically source and re-compile packer whenever you save this init.lua
+local packer_group = vim.api.nvim_create_augroup('Packer', { clear = true })
+vim.api.nvim_create_autocmd('BufWritePost', {
+  command = 'source <afile> | PackerCompile',
+  group = packer_group,
+  pattern = vim.fn.expand '$MYVIMRC',
+})
+
 -- boostrap package manager
 local fn = vim.fn
 local install_path = fn.stdpath('data')..'/site/pack/packer/start/packer.nvim'
@@ -45,6 +53,8 @@ return require('packer').startup(function(use)
 	    {'neovim/nvim-lspconfig'},
 	    {'williamboman/mason.nvim'},
 	    {'williamboman/mason-lspconfig.nvim'},
+      {'ray-x/go.nvim'},
+      {'ray-x/guihua.lua'},
 
 	    -- Autocompletion
 	    {'hrsh7th/nvim-cmp'},
@@ -63,8 +73,81 @@ return require('packer').startup(function(use)
 
     lsp.preset('recommended')
     lsp.setup()
+
+    require('go').setup()
   end
   }
+
+  use {
+      'nvim-treesitter/nvim-treesitter',
+      requires = {
+        'nvim-treesitter/nvim-treesitter-textobjects',
+      },
+    config = function()
+      -- [[ Configure Treesitter ]]
+    -- See `:help nvim-treesitter`
+    require('nvim-treesitter.configs').setup {
+      -- Add languages to be installed here that you want installed for treesitter
+      ensure_installed = { 'lua', 'typescript', 'rust', 'go', 'python' },
+
+      highlight = { enable = true },
+      indent = { enable = true },
+      incremental_selection = {
+        enable = true,
+        keymaps = {
+          init_selection = '<c-space>',
+          node_incremental = '<c-space>',
+          -- TODO: I'm not sure for this one.
+          scope_incremental = '<c-s>',
+          node_decremental = '<c-backspace>',
+        },
+      },
+      textobjects = {
+        select = {
+          enable = true,
+          lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+          keymaps = {
+            -- You can use the capture groups defined in textobjects.scm
+            ['af'] = '@function.outer',
+            ['if'] = '@function.inner',
+            ['ac'] = '@class.outer',
+            ['ic'] = '@class.inner',
+          },
+        },
+        move = {
+          enable = true,
+          set_jumps = true, -- whether to set jumps in the jumplist
+          goto_next_start = {
+            [']m'] = '@function.outer',
+            [']]'] = '@class.outer',
+          },
+          goto_next_end = {
+            [']M'] = '@function.outer',
+            [']['] = '@class.outer',
+          },
+          goto_previous_start = {
+            ['[m'] = '@function.outer',
+            ['[['] = '@class.outer',
+          },
+          goto_previous_end = {
+            ['[M'] = '@function.outer',
+            ['[]'] = '@class.outer',
+          },
+        },
+        swap = {
+          enable = true,
+          swap_next = {
+            ['<leader>a'] = '@parameter.inner',
+          },
+          swap_previous = {
+            ['<leader>A'] = '@parameter.inner',
+          },
+        },
+      },
+    }
+    end
+    }
+
   use {
  	"rebelot/kanagawa.nvim",
 	config = function()
